@@ -108,6 +108,13 @@ function renderGatewaySection(gwDashboard) {
                 <p class="text-sm text-gray-600">URL: <a href="${escapeHtml(gwDashboard.gateway_url)}" target="_blank" class="text-blue-600 hover:underline font-mono text-xs">${escapeHtml(gwDashboard.gateway_url)}</a></p>
                 <p class="text-sm text-gray-600 mt-1">Active Config: <span class="font-mono text-xs">${escapeHtml(gwDashboard.active_config)}</span></p>
             </div>
+            <div id="curl-example" class="mb-4 hidden">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-medium text-gray-700">curl Example</h3>
+                    <button onclick="copyCurlExample()" class="text-xs text-blue-600 hover:text-blue-800">Copy</button>
+                </div>
+                <pre id="curl-example-code" class="bg-gray-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto whitespace-pre"></pre>
+            </div>
         `;
     } else {
         html += `
@@ -463,6 +470,40 @@ function renderCodePreviewModal(files) {
         <button onclick="closeModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Close</button>
     `;
     openModal();
+}
+
+// --- curl Example ---
+
+function renderCurlExample(gatewayUrl, apiKey, model) {
+    const container = document.getElementById("curl-example");
+    const codeEl = document.getElementById("curl-example-code");
+    if (!container || !codeEl) return;
+
+    if (!gatewayUrl || !apiKey) {
+        container.classList.add("hidden");
+        return;
+    }
+
+    model = model || "gemini-2.5-flash";
+    const curl = `curl -X POST "${gatewayUrl}/publishers/google/models/${model}/generateContent?key=${apiKey}" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "contents": [{
+      "role": "user",
+      "parts": [{"text": "Explain API Gateway in one sentence."}]
+    }]
+  }'`;
+
+    codeEl.textContent = curl;
+    container.classList.remove("hidden");
+}
+
+function copyCurlExample() {
+    const code = document.getElementById("curl-example-code");
+    if (code) {
+        navigator.clipboard.writeText(code.textContent)
+            .then(() => showToast("Copied to clipboard", "success"));
+    }
 }
 
 // --- Utilities ---

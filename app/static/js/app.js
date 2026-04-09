@@ -50,9 +50,24 @@ async function loadGatewaySection() {
     try {
         gatewayDashboardData = await ApiClient.gateway.getDashboard();
         renderGatewaySection(gatewayDashboardData);
+        loadCurlExample();
     } catch (err) {
         document.getElementById("gateway-section").innerHTML =
             `<p class="text-red-500 text-sm">${escapeHtml(err.message)}</p>`;
+    }
+}
+
+async function loadCurlExample() {
+    if (!gatewayDashboardData?.gateway_exists || !gatewayDashboardData?.gateway_url) return;
+    try {
+        const keysData = await ApiClient.keys.list();
+        if (keysData.keys && keysData.keys.length > 0) {
+            const keyId = extractKeyId(keysData.keys[0].name);
+            const resp = await ApiClient.keys.getKeyString(keyId);
+            renderCurlExample(gatewayDashboardData.gateway_url, resp.key_string);
+        }
+    } catch {
+        // Silently skip if keys can't be loaded
     }
 }
 
