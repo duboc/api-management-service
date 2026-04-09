@@ -1,6 +1,8 @@
 import logging
 
+import httpx
 from fastapi import APIRouter, Depends, Query, Request, status
+from pydantic import BaseModel
 
 from app.config import settings
 from app.schemas.gateway import (
@@ -160,3 +162,73 @@ async def get_gateway_dashboard(
         gateway_id=f"{settings.gateway_api_id}-gw",
         location=settings.gateway_region,
     )
+
+
+# --- Test ---
+
+
+class GatewayTestRequest(BaseModel):
+    gateway_url: str
+    api_key: str
+    model: str = "gemini-2.5-flash"
+    prompt: str = "Say hello in one sentence."
+
+
+class GatewayTestResponse(BaseModel):
+    success: bool
+    status_code: int
+    response_text: str = ""
+    error: str = ""
+
+
+@router.post("/test", response_model=GatewayTestResponse)
+async def test_gateway(body: GatewayTestRequest) -> GatewayTestResponse:
+    """Send a test generateContent request through the API Gateway."""
+    url = (
+        f"{body.gateway_url.rstrip('/')}"
+        f"/publishers/google/models/{body.model}"
+        f"/generateContent?key={body.api_key}"
+    )
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": body.prompt}],
+            }
+        ]
+    }
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                url,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+            )
+        if resp.status_code == 200:
+            data = resp.json()
+            text = ""
+            candidates = data.get("candidates", [])
+            if candidates:
+                parts = (
+                    candidates[0]
+                    .get("content", {})
+                    .get("parts", [])
+                )
+                if parts:
+                    text = parts[0].get("text", "")
+            return GatewayTestResponse(
+                success=True,
+                status_code=resp.status_code,
+                response_text=text,
+            )
+        return GatewayTestResponse(
+            success=False,
+            status_code=resp.status_code,
+            error=resp.text[:500],
+        )
+    except Exception as e:
+        return GatewayTestResponse(
+            success=False,
+            status_code=0,
+            error=str(e),
+        )

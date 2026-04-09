@@ -68,6 +68,12 @@ const ApiClient = {
         async getDashboard() {
             return ApiClient._request("/api/gateway/dashboard");
         },
+        async test(data) {
+            return ApiClient._request("/api/gateway/test", {
+                method: "POST",
+                body: JSON.stringify(data),
+            });
+        },
     },
 
     proxy: {

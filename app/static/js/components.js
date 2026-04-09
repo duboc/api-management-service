@@ -382,6 +382,68 @@ function renderKeyStringModal(keyId, keyString) {
     openModal();
 }
 
+function renderTestGatewayModal(gatewayUrl) {
+    document.getElementById("modal-title").textContent = "Test API Gateway";
+    document.getElementById("modal-body").innerHTML = `
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Gateway URL</label>
+                <input type="text" id="form-test-gateway-url" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${escapeHtml(gatewayUrl || '')}">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                <div class="flex gap-2">
+                    <input type="text" id="form-test-api-key" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="AIza...">
+                    <button onclick="loadKeyForTest()" class="px-3 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 whitespace-nowrap" title="Load first available key">Load Key</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                <input type="text" id="form-test-model" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="gemini-2.5-flash">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Prompt</label>
+                <textarea id="form-test-prompt" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">Say hello in one sentence.</textarea>
+            </div>
+            <div id="test-result" class="hidden"></div>
+        </div>
+    `;
+    document.getElementById("modal-footer").innerHTML = `
+        <button onclick="closeModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Close</button>
+        <button onclick="submitTestGateway()" id="btn-submit-test" class="px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700">Send Request</button>
+    `;
+    openModal();
+}
+
+function renderTestResult(result) {
+    const container = document.getElementById("test-result");
+    container.classList.remove("hidden");
+
+    if (result.success) {
+        container.innerHTML = `
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700">${result.status_code}</span>
+                    <span class="text-sm font-medium text-green-800">Success</span>
+                </div>
+                <div class="bg-white rounded p-3 mt-2">
+                    <p class="text-sm text-gray-800 whitespace-pre-wrap">${escapeHtml(result.response_text)}</p>
+                </div>
+            </div>
+        `;
+    } else {
+        container.innerHTML = `
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700">${result.status_code || 'Error'}</span>
+                    <span class="text-sm font-medium text-red-800">Failed</span>
+                </div>
+                <pre class="text-xs text-red-700 mt-2 whitespace-pre-wrap overflow-x-auto">${escapeHtml(result.error)}</pre>
+            </div>
+        `;
+    }
+}
+
 function renderCodePreviewModal(files) {
     document.getElementById("modal-title").textContent = "Proxy Source Code";
     document.getElementById("modal-body").innerHTML = `

@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadAll();
 
     document.getElementById("btn-refresh-all").addEventListener("click", loadAll);
+    document.getElementById("btn-test-gateway").addEventListener("click", handleTestGateway);
     document.getElementById("btn-create-api").addEventListener("click", () => renderCreateApiModal());
     document.getElementById("btn-create-config").addEventListener("click", handleCreateConfig);
     document.getElementById("btn-deploy-gateway").addEventListener("click", handleDeployGateway);
@@ -164,6 +165,60 @@ async function submitDeployGateway() {
         showToast(`Failed to deploy gateway: ${err.message}`, "error");
     } finally {
         hideLoading();
+    }
+}
+
+// --- Test Gateway ---
+
+function handleTestGateway() {
+    const gwUrl = gatewayDashboardData?.gateway_url || "";
+    renderTestGatewayModal(gwUrl);
+}
+
+async function loadKeyForTest() {
+    try {
+        const data = await ApiClient.keys.list();
+        if (data.keys && data.keys.length > 0) {
+            const keyId = extractKeyId(data.keys[0].name);
+            const resp = await ApiClient.keys.getKeyString(keyId);
+            document.getElementById("form-test-api-key").value = resp.key_string;
+            showToast("API key loaded", "success");
+        } else {
+            showToast("No API keys found", "error");
+        }
+    } catch (err) {
+        showToast(`Failed to load key: ${err.message}`, "error");
+    }
+}
+
+async function submitTestGateway() {
+    const gatewayUrl = document.getElementById("form-test-gateway-url").value.trim();
+    const apiKey = document.getElementById("form-test-api-key").value.trim();
+    const model = document.getElementById("form-test-model").value.trim();
+    const prompt = document.getElementById("form-test-prompt").value.trim();
+
+    if (!gatewayUrl || !apiKey) {
+        showToast("Gateway URL and API key are required", "error");
+        return;
+    }
+
+    const btn = document.getElementById("btn-submit-test");
+    btn.disabled = true;
+    btn.textContent = "Sending...";
+
+    try {
+        const result = await ApiClient.gateway.test({
+            gateway_url: gatewayUrl,
+            api_key: apiKey,
+            model: model,
+            prompt: prompt,
+        });
+        renderTestResult(result);
+    } catch (err) {
+        renderTestResult({ success: false, status_code: 0, error: err.message });
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Send Request";
     }
 }
 
