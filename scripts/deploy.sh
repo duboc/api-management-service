@@ -222,6 +222,9 @@ MANAGED_SERVICE=$(gcloud api-gateway apis describe "$API_ID" \
 
 echo "  Managed service: $MANAGED_SERVICE"
 
+echo "  Enabling managed service ..."
+gcloud services enable "$MANAGED_SERVICE" --project="$PROJECT_ID" 2>/dev/null && echo "  Managed service enabled" || echo "  Already enabled"
+
 API_KEY_RESPONSE=$(python3 -c "
 from google.cloud import api_keys_v2
 from google.cloud.api_keys_v2 import types
