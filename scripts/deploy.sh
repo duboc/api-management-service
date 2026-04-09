@@ -87,15 +87,17 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --condition=None --quiet &>/dev/null
 echo "  Proxy SA:   $PROXY_SA_EMAIL (roles/aiplatform.user)"
 
-# Cloud Build needs storage access for gcloud run deploy --source
+# Cloud Build needs storage, artifact registry, and logging access for gcloud run deploy --source
 PROJECT_NUM=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
 for sa in "${PROJECT_NUM}-compute@developer.gserviceaccount.com" "${PROJECT_NUM}@cloudbuild.gserviceaccount.com"; do
-    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-        --member="serviceAccount:$sa" \
-        --role="roles/storage.admin" \
-        --condition=None --quiet &>/dev/null
+    for role in roles/storage.admin roles/artifactregistry.writer roles/logging.logWriter; do
+        gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+            --member="serviceAccount:$sa" \
+            --role="$role" \
+            --condition=None --quiet &>/dev/null
+    done
 done
-echo "  Cloud Build storage permissions: OK"
+echo "  Cloud Build permissions: OK"
 echo ""
 
 # ---- Step 3: Deploy Cloud Run Proxy ----
