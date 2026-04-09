@@ -1,0 +1,44 @@
+.modal-backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+}
+
+@keyframes slide-in {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slide-out {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
+.toast-enter {
+    animation: slide-in 0.3s ease-out forwards;
+}
+
+.toast-exit {
+    animation: slide-out 0.3s ease-in forwards;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.spinner {
+    border: 3px solid #e5e7eb;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+    animation: spin 0.6s linear infinite;
+}
+
+tr:hover td {
+    background-color: #f9fafb;
+}
+
+.key-string-masked {
+    font-family: monospace;
+    letter-spacing: 0.1em;
+}

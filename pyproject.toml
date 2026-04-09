@@ -1,0 +1,9 @@
+[project]
+name = "api-management-service"
+version = "0.2.0"
+description = "Web app to manage API Gateway + Cloud Run proxy for Vertex AI predictions"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
