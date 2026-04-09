@@ -46,17 +46,23 @@ class ApiKeysService:
         logger.info(
             "Creating key with display_name=%s", request.display_name
         )
-        key = types.Key(display_name=request.display_name)
+        if not managed_service:
+            raise ValueError(
+                "Cannot create API key: no gateway managed service found. "
+                "Deploy an API Gateway first."
+            )
 
-        if request.restrict_to_gateway and managed_service:
-            key.restrictions = types.Restrictions(
+        key = types.Key(
+            display_name=request.display_name,
+            restrictions=types.Restrictions(
                 api_targets=[
                     types.ApiTarget(service=managed_service)
                 ]
-            )
-            logger.info(
-                "Restricting key to managed service: %s", managed_service
-            )
+            ),
+        )
+        logger.info(
+            "Restricting key to managed service: %s", managed_service
+        )
 
         operation = self._client.create_key(parent=self._parent, key=key)
         created_key = operation.result()

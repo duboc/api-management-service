@@ -15,7 +15,7 @@ class TestCreateKey:
     def test_returns_201(self, test_client):
         resp = test_client.post(
             "/api/keys",
-            json={"display_name": "My Key", "restrict_to_gateway": True},
+            json={"display_name": "My Key"},
         )
         assert resp.status_code == 201
         assert resp.json()["uid"] == "test-key-123"

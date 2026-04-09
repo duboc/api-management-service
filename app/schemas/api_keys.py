@@ -6,7 +6,6 @@ from pydantic import BaseModel
 
 class KeyCreateRequest(BaseModel):
     display_name: str = ""
-    restrict_to_gateway: bool = True
 
 
 class KeyResponse(BaseModel):

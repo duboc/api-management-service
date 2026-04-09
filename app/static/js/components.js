@@ -352,10 +352,7 @@ function renderCreateKeyModal() {
                 <label class="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
                 <input type="text" id="form-key-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="My API Key">
             </div>
-            <label class="flex items-center gap-2">
-                <input type="checkbox" id="form-restrict-gateway" checked class="rounded border-gray-300">
-                <span class="text-sm text-gray-700">Restrict to gateway managed service</span>
-            </label>
+            <p class="text-xs text-gray-500">Key will be restricted to the API Gateway managed service.</p>
         </div>
     `;
     document.getElementById("modal-footer").innerHTML = `

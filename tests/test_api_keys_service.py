@@ -75,7 +75,7 @@ class TestGetKeyString:
 
 
 class TestCreateKey:
-    def test_creates_and_fetches_key_string(self, service):
+    def test_creates_with_gateway_restriction(self, service):
         created_key = _make_proto_key(display_name="New Key")
         operation = MagicMock()
         operation.result.return_value = created_key
@@ -86,53 +86,21 @@ class TestCreateKey:
         service._mock_client.get_key_string.return_value = key_string_resp
 
         request = KeyCreateRequest(display_name="New Key")
-        result = service.create_key(request)
+        result = service.create_key(request, managed_service="my-svc.apigateway.cloud.goog")
 
         assert result.display_name == "New Key"
         assert result.key_string == "AIzaSyNewKey"
-        service._mock_client.get_key_string.assert_called_once()
-
-    def test_restricts_to_gateway(self, service):
-        created_key = _make_proto_key()
-        operation = MagicMock()
-        operation.result.return_value = created_key
-        service._mock_client.create_key.return_value = operation
-
-        key_string_resp = MagicMock()
-        key_string_resp.key_string = "key"
-        service._mock_client.get_key_string.return_value = key_string_resp
-
-        request = KeyCreateRequest(
-            display_name="Gateway Key", restrict_to_gateway=True
-        )
-        service.create_key(request, managed_service="my-svc.apigateway.cloud.goog")
 
         create_call = service._mock_client.create_key.call_args
         key_arg = create_call.kwargs["key"]
         assert key_arg.restrictions is not None
+        assert len(key_arg.restrictions.api_targets) > 0
 
-    def test_no_restriction_without_managed_service(self, service):
-        created_key = _make_proto_key()
-        operation = MagicMock()
-        operation.result.return_value = created_key
-        service._mock_client.create_key.return_value = operation
+    def test_rejects_without_managed_service(self, service):
+        request = KeyCreateRequest(display_name="Bad Key")
 
-        key_string_resp = MagicMock()
-        key_string_resp.key_string = "key"
-        service._mock_client.get_key_string.return_value = key_string_resp
-
-        request = KeyCreateRequest(restrict_to_gateway=True)
-        service.create_key(request, managed_service="")
-
-        create_call = service._mock_client.create_key.call_args
-        key_arg = create_call.kwargs["key"]
-        # When managed_service is empty, restrictions should not have api_targets set
-        has_targets = (
-            key_arg.restrictions is not None
-            and hasattr(key_arg.restrictions, "api_targets")
-            and len(key_arg.restrictions.api_targets) > 0
-        )
-        assert not has_targets
+        with pytest.raises(ValueError, match="no gateway managed service"):
+            service.create_key(request, managed_service="")
 
 
 class TestDeleteKey:

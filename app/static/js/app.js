@@ -265,14 +265,12 @@ async function submitDeployProxy() {
 
 async function submitCreateKey() {
     const displayName = document.getElementById("form-key-name").value.trim();
-    const restrictToGateway = document.getElementById("form-restrict-gateway").checked;
 
     closeModal();
     showLoading("Creating API key...");
     try {
         const key = await ApiClient.keys.create({
             display_name: displayName,
-            restrict_to_gateway: restrictToGateway,
         });
         hideLoading();
         if (key.key_string) {
