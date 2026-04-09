@@ -69,7 +69,7 @@ fi
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:$GW_SA_EMAIL" \
     --role="roles/run.invoker" \
-    --condition=None --quiet 2>/dev/null
+    --condition=None --quiet &>/dev/null
 echo "  Gateway SA: $GW_SA_EMAIL (roles/run.invoker)"
 
 # Proxy SA (calls Vertex AI)
@@ -84,8 +84,18 @@ fi
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:$PROXY_SA_EMAIL" \
     --role="roles/aiplatform.user" \
-    --condition=None --quiet 2>/dev/null
+    --condition=None --quiet &>/dev/null
 echo "  Proxy SA:   $PROXY_SA_EMAIL (roles/aiplatform.user)"
+
+# Cloud Build needs storage access for gcloud run deploy --source
+PROJECT_NUM=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
+for sa in "${PROJECT_NUM}-compute@developer.gserviceaccount.com" "${PROJECT_NUM}@cloudbuild.gserviceaccount.com"; do
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+        --member="serviceAccount:$sa" \
+        --role="roles/storage.admin" \
+        --condition=None --quiet &>/dev/null
+done
+echo "  Cloud Build storage permissions: OK"
 echo ""
 
 # ---- Step 3: Deploy Cloud Run Proxy ----
