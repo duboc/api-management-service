@@ -5,72 +5,58 @@ that secures access to Vertex AI services through API key validation.
 
 ## Architecture
 
-```
-                          +-----------------+
-                          |   Web UI        |
-                          |  (this app)     |
-                          |  localhost:8081  |
-                          +--------+--------+
-                                   |
-                          manages / deploys
-                                   |
-          +------------------------+------------------------+
-          |                        |                        |
-          v                        v                        v
-  +-------+--------+    +---------+---------+    +---------+---------+
-  |  API Gateway    |    |  Cloud Run Proxy  |    |  API Keys         |
-  |  (validates     |    |  (transparent     |    |  (google-cloud-   |
-  |   API keys)     |    |   auth layer)     |    |   api-keys)       |
-  +-------+--------+    +---------+---------+    +-------------------+
-          |                        |
-          |   x-google-backend     |
-          +--------->--------------+
-                                   |
-                          adds OAuth2 token
-                                   |
-                                   v
-                        +----------+----------+
-                        |    Vertex AI API     |
-                        |                      |
-                        |  generateContent     |
-                        |  streamGenerate...   |
-                        |  predict             |
-                        |  countTokens         |
-                        |  embedContent        |
-                        +---------------------+
+```mermaid
+graph TB
+    UI["Web UI<br/>(this app)<br/>localhost:8081"]
+
+    UI -->|manages / deploys| GW
+    UI -->|manages / deploys| PROXY
+    UI -->|manages / deploys| KEYS
+
+    subgraph GCP ["Google Cloud Platform"]
+        GW["API Gateway<br/>validates API keys"]
+        PROXY["Cloud Run Proxy<br/>transparent auth layer"]
+        KEYS["API Keys<br/>google-cloud-api-keys"]
+
+        GW -->|"x-google-backend<br/>path_translation: APPEND_PATH_TO_ADDRESS"| PROXY
+        PROXY -->|"adds OAuth2 Bearer token"| VERTEX
+
+        subgraph VERTEX_BOX ["Vertex AI API"]
+            VERTEX["generateContent<br/>streamGenerateContent<br/>predict<br/>countTokens<br/>embedContent"]
+        end
+    end
+
+    style UI fill:#4285F4,stroke:#1a73e8,color:#fff
+    style GW fill:#34A853,stroke:#1e8e3e,color:#fff
+    style PROXY fill:#FBBC04,stroke:#f9ab00,color:#333
+    style KEYS fill:#EA4335,stroke:#c5221f,color:#fff
+    style VERTEX fill:#9334E6,stroke:#7627bb,color:#fff
+    style GCP fill:#f8f9fa,stroke:#dadce0
+    style VERTEX_BOX fill:#f3e8fd,stroke:#9334E6
 ```
 
 ### Request Flow
 
-```
-Client                API Gateway          Cloud Run Proxy         Vertex AI
-  |                       |                      |                     |
-  |  POST /publishers/google/models/gemini-3.0-flash-preview:generateContent  |
-  |  + ?key=AIza...       |                      |                     |
-  |---------------------->|                      |                     |
-  |                       |                      |                     |
-  |              validate API key                |                     |
-  |              check rate limits               |                     |
-  |                       |                      |                     |
-  |                       |  forward request     |                     |
-  |                       |  (path appended)     |                     |
-  |                       |--------------------->|                     |
-  |                       |                      |                     |
-  |                       |             get OAuth2 token               |
-  |                       |             from service account           |
-  |                       |                      |                     |
-  |                       |                      |  POST .../:generate |
-  |                       |                      |  + Bearer token     |
-  |                       |                      |-------------------->|
-  |                       |                      |                     |
-  |                       |                      |    JSON response    |
-  |                       |                      |<--------------------|
-  |                       |                      |                     |
-  |                       |   stream response    |                     |
-  |                       |<---------------------|                     |
-  |                       |                      |                     |
-  |    JSON response      |                      |                     |
-  |<----------------------|                      |                     |
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant GW as API Gateway
+    participant P as Cloud Run Proxy
+    participant V as Vertex AI
+
+    C->>GW: POST /publishers/google/models/<br/>gemini-3.0-flash-preview:generateContent<br/>?key=AIza...
+
+    Note over GW: Validate API key<br/>Check restrictions
+
+    GW->>P: Forward request<br/>(path appended to backend URL)
+
+    Note over P: Get OAuth2 token<br/>from service account
+
+    P->>V: POST .../publishers/google/models/<br/>gemini-3.0-flash-preview:generateContent<br/>+ Bearer token
+
+    V-->>P: JSON response (streamed)
+    P-->>GW: Stream response back
+    GW-->>C: JSON response
 ```
 
 ### Key Design Decisions
@@ -81,6 +67,8 @@ Client                API Gateway          Cloud Run Proxy         Vertex AI
   without proxy changes.
 - **API Gateway validates keys**: Uses OpenAPI 2.0 spec with `securityDefinitions`
   for API key auth and `x-google-backend` with `path_translation: APPEND_PATH_TO_ADDRESS`.
+- **Model-agnostic**: The proxy forwards any model path -- Gemini, Imagen, embeddings,
+  custom endpoints. No proxy changes needed for new models.
 - **gcloud CLI via async subprocess**: Gateway and Cloud Run operations use
   `asyncio.create_subprocess_exec` for reliable deployment management.
 - **google-cloud-api-keys client library**: API key CRUD uses the Python client
