@@ -207,7 +207,10 @@ class GatewayService:
                 },
             },
         }
-        return yaml.dump(spec, default_flow_style=False)
+        # Avoid YAML anchors/aliases -- API Gateway doesn't support them
+        noalias_dumper = yaml.dumper.Dumper
+        noalias_dumper.ignore_aliases = lambda self, data: True
+        return yaml.dump(spec, Dumper=noalias_dumper, default_flow_style=False)
 
     async def create_api_config(
         self, api_id: str, request: ApiConfigCreateRequest
