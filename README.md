@@ -98,23 +98,35 @@ Derived from the [Vertex AI Discovery Document](https://aiplatform.googleapis.co
 
 ## Quick Start
 
-```bash
-# 1. Clone and enter the project
-cd api-management-service
+### One-command deploy (recommended)
 
-# 2. Run setup (checks prereqs, generates .env, installs deps)
+Deploys everything end-to-end: APIs, service accounts, Cloud Run proxy,
+API Gateway, and creates an API key.
+
+```bash
+cd api-management-service
+pip install -r requirements.txt
+./scripts/deploy.sh mestrealvaro
+python run.py
+```
+
+Open [http://localhost:8081](http://localhost:8081) -- all components will be deployed and visible.
+
+### Step-by-step setup
+
+If you prefer to set up each component individually:
+
+```bash
+# 1. Run setup (checks prereqs, generates .env, installs deps)
 ./scripts/setup.sh
 
-# 3. Enable required GCP APIs
+# 2. Enable required GCP APIs
 ./scripts/enable-gcp-apis.sh <PROJECT_ID>
 
-# 4. Create service accounts with proper IAM roles
+# 3. Create service accounts with proper IAM roles
 ./scripts/create-service-account.sh <PROJECT_ID>
 
-# 5. Review and edit .env
-cat .env
-
-# 6. Start the app
+# 4. Start the app and use the web UI to deploy each component
 python run.py
 ```
 
@@ -124,6 +136,7 @@ Open [http://localhost:8081](http://localhost:8081)
 
 | Script | What it does |
 |---|---|
+| `scripts/deploy.sh` | **Full end-to-end deploy**: enable APIs, create SAs, deploy proxy, create gateway, create API key, write `.env` |
 | `scripts/setup.sh` | Check prereqs, detect GCP config, generate `.env`, install Python deps |
 | `scripts/enable-gcp-apis.sh` | Enable aiplatform, apigateway, run, apikeys, and supporting APIs |
 | `scripts/create-service-account.sh` | Create `api-gateway-sa` (Cloud Run invoker) and `vertex-proxy-sa` (Vertex AI user) |
