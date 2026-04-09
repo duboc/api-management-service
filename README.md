@@ -11,53 +11,91 @@ graph TB
 
     UI -->|manages / deploys| GW
     UI -->|manages / deploys| PROXY
-    UI -->|manages / deploys| KEYS
+    UI -->|creates / restricts| KEYS
 
     subgraph GCP ["Google Cloud Platform"]
-        GW["API Gateway<br/>validates API keys"]
-        PROXY["Cloud Run Proxy<br/>transparent auth layer"]
-        KEYS["API Keys<br/>google-cloud-api-keys"]
+        subgraph AUTH_LAYER ["Authentication Layer"]
+            KEYS["API Keys<br/>restricted to gateway<br/>managed service"]
+            GW["API Gateway<br/>validates API keys"]
+            GW_SA["api-gateway-sa<br/>roles/run.invoker"]
+        end
 
-        GW -->|"x-google-backend<br/>path_translation: APPEND_PATH_TO_ADDRESS"| PROXY
-        PROXY -->|"adds OAuth2 Bearer token"| VERTEX
+        subgraph PROXY_LAYER ["Authorization Layer"]
+            PROXY["Cloud Run Proxy<br/>path translation + auth"]
+            PROXY_SA["vertex-proxy-sa<br/>roles/aiplatform.user"]
+        end
 
         subgraph VERTEX_BOX ["Vertex AI API"]
             VERTEX["generateContent<br/>streamGenerateContent<br/>predict<br/>countTokens<br/>embedContent"]
         end
+
+        KEYS -.->|"API key validates<br/>client identity"| GW
+        GW -->|"x-google-backend<br/>(JWT from api-gateway-sa)"| PROXY
+        GW_SA -.->|"invokes"| PROXY
+        PROXY_SA -.->|"OAuth2 Bearer token"| VERTEX
+        PROXY -->|"adds SA token<br/>translates /method to :method"| VERTEX
     end
 
+    CLIENT["Client App"] -->|"API key in ?key= param<br/>No GCP credentials needed"| GW
+
     style UI fill:#4285F4,stroke:#1a73e8,color:#fff
+    style CLIENT fill:#4285F4,stroke:#1a73e8,color:#fff
     style GW fill:#34A853,stroke:#1e8e3e,color:#fff
+    style GW_SA fill:#34A853,stroke:#1e8e3e,color:#fff
     style PROXY fill:#FBBC04,stroke:#f9ab00,color:#333
+    style PROXY_SA fill:#FBBC04,stroke:#f9ab00,color:#333
     style KEYS fill:#EA4335,stroke:#c5221f,color:#fff
     style VERTEX fill:#9334E6,stroke:#7627bb,color:#fff
     style GCP fill:#f8f9fa,stroke:#dadce0
+    style AUTH_LAYER fill:#e8f5e9,stroke:#34A853
+    style PROXY_LAYER fill:#fff8e1,stroke:#FBBC04
     style VERTEX_BOX fill:#f3e8fd,stroke:#9334E6
 ```
 
-### Request Flow
+### Authentication & Authorization Flow
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
+    participant C as Client App
     participant GW as API Gateway
-    participant P as Cloud Run Proxy
+    participant P as Cloud Run Proxy<br/>(vertex-proxy-sa)
     participant V as Vertex AI
+
+    Note over C: Only needs an API key<br/>No GCP credentials required
 
     C->>GW: POST /publishers/google/models/<br/>gemini-2.5-flash/generateContent<br/>?key=AIza...
 
-    Note over GW: Validate API key<br/>Check restrictions
+    Note over GW: 1. Validate API key<br/>2. Check key is restricted<br/>to this gateway's<br/>managed service
 
-    GW->>P: Forward request<br/>(path appended to backend URL)
+    GW->>GW: API key valid?
 
-    Note over P: Get OAuth2 token<br/>Translate /method to :method
+    alt Invalid or unrestricted key
+        GW-->>C: 403 Forbidden
+    end
 
-    P->>V: POST .../publishers/google/models/<br/>gemini-2.5-flash:generateContent<br/>+ Bearer token
+    Note over GW: 3. Attach JWT signed by<br/>api-gateway-sa<br/>(roles/run.invoker)
+
+    GW->>P: Forward request + JWT<br/>(path appended to backend URL)
+
+    Note over P: 4. Verify JWT from gateway<br/>5. Translate path:<br/>/model/generateContent<br/>to /model:generateContent<br/>6. Get OAuth2 token from<br/>vertex-proxy-sa<br/>(roles/aiplatform.user)
+
+    P->>V: POST .../publishers/google/models/<br/>gemini-2.5-flash:generateContent<br/>Authorization: Bearer {SA OAuth2 token}
 
     V-->>P: JSON response (streamed)
     P-->>GW: Stream response back
     GW-->>C: JSON response
 ```
+
+### Security Model
+
+| Layer | Component | Credential | Purpose |
+|---|---|---|---|
+| **Client** | Your app | API key (`?key=AIza...`) | Identifies the client; no GCP access |
+| **Gateway** | API Gateway | Validates API key | Ensures key is restricted to this gateway only |
+| **Gateway -> Proxy** | `api-gateway-sa` | JWT (roles/run.invoker) | Authorizes gateway to invoke Cloud Run |
+| **Proxy -> Vertex AI** | `vertex-proxy-sa` | OAuth2 token (roles/aiplatform.user) | Authorizes proxy to call Vertex AI |
+
+> **The API key never reaches Vertex AI.** It is consumed by the API Gateway for client authentication. The Cloud Run proxy uses its own service account's OAuth2 token to authorize requests to Vertex AI.
 
 ### Key Design Decisions
 
