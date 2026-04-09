@@ -107,11 +107,12 @@ class TestGenerateOpenapiSpec:
         assert backend["address"] == "https://proxy.run.app"
         assert backend["path_translation"] == "APPEND_PATH_TO_ADDRESS"
 
-    def test_health_has_no_auth(self, gateway_service):
+    def test_health_inherits_global_auth(self, gateway_service):
         spec_yaml = gateway_service._generate_openapi_spec("https://proxy.run.app")
         spec = yaml.safe_load(spec_yaml)
 
-        assert spec["paths"]["/health"]["get"]["security"] == []
+        # Health uses global security (API key) -- no override
+        assert "security" not in spec["paths"]["/health"]["get"]
 
 
 class TestCreateApiConfig:

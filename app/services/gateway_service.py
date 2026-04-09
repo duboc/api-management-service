@@ -111,6 +111,22 @@ class GatewayService:
             "path_translation": "APPEND_PATH_TO_ADDRESS",
         }
 
+        model_param = {
+            "name": "model",
+            "in": "path",
+            "required": True,
+            "type": "string",
+            "description": "Model ID (e.g. gemini-3.0-flash-preview)",
+        }
+
+        endpoint_param = {
+            "name": "endpoint",
+            "in": "path",
+            "required": True,
+            "type": "string",
+            "description": "Endpoint ID",
+        }
+
         body_param = {
             "name": "body",
             "in": "body",
@@ -118,17 +134,16 @@ class GatewayService:
             "schema": {"type": "object"},
         }
 
-        def _post_op(op_id, summary, secured=True):
-            op = {
+        def _post_op(op_id, summary, path_params=None):
+            params = list(path_params or [])
+            params.append(body_param)
+            return {
                 "summary": summary,
                 "operationId": op_id,
                 "x-google-backend": backend,
-                "parameters": [body_param],
+                "parameters": params,
                 "responses": {"200": {"description": "OK"}},
             }
-            if not secured:
-                op["security"] = []
-            return op
 
         spec = {
             "swagger": "2.0",
@@ -156,24 +171,28 @@ class GatewayService:
                     "post": _post_op(
                         "generateContent",
                         "Generate content with a Gemini model",
+                        [model_param],
                     ),
                 },
                 "/publishers/google/models/{model}:streamGenerateContent": {
                     "post": _post_op(
                         "streamGenerateContent",
                         "Stream generated content from a Gemini model",
+                        [model_param],
                     ),
                 },
                 "/publishers/google/models/{model}:countTokens": {
                     "post": _post_op(
                         "countTokens",
                         "Count tokens for input content",
+                        [model_param],
                     ),
                 },
                 "/publishers/google/models/{model}:embedContent": {
                     "post": _post_op(
                         "embedContent",
                         "Generate embeddings for input content",
+                        [model_param],
                     ),
                 },
                 # --- Custom endpoints ---
@@ -181,27 +200,29 @@ class GatewayService:
                     "post": _post_op(
                         "predict",
                         "Online prediction on a deployed model",
+                        [endpoint_param],
                     ),
                 },
                 "/endpoints/{endpoint}:generateContent": {
                     "post": _post_op(
                         "endpointGenerateContent",
                         "Generate content on a tuned endpoint",
+                        [endpoint_param],
                     ),
                 },
                 "/endpoints/{endpoint}:rawPredict": {
                     "post": _post_op(
                         "rawPredict",
                         "Raw prediction with arbitrary payload",
+                        [endpoint_param],
                     ),
                 },
-                # --- Health ---
+                # --- Health (requires API key like all other endpoints) ---
                 "/health": {
                     "get": {
                         "summary": "Health check",
                         "operationId": "healthCheck",
                         "x-google-backend": backend,
-                        "security": [],
                         "responses": {"200": {"description": "OK"}},
                     }
                 },
