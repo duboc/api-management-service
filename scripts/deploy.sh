@@ -156,7 +156,7 @@ echo ""
 # ---- Step 5: Generate OpenAPI spec ----
 echo "--- Step 5/8: Generating OpenAPI spec ---"
 
-SPEC_FILE=$(mktemp --suffix=.yaml)
+SPEC_FILE=$(mktemp /tmp/openapi-XXXXXX.yaml)
 
 python3 -c "
 from app.services.gateway_service import GatewayService
