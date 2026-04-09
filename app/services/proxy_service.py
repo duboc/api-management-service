@@ -191,6 +191,9 @@ class ProxyService:
     async def get_proxy_status(
         self, service_name: str, region: str
     ) -> ProxyStatusResponse:
+        if not service_name:
+            return ProxyStatusResponse(deployed=False)
+
         try:
             data = await run_gcloud(
                 [

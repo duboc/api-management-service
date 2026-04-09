@@ -404,6 +404,9 @@ class GatewayService:
     ) -> GatewayDashboardResponse:
         dashboard = GatewayDashboardResponse()
 
+        if not api_id:
+            return dashboard
+
         try:
             api_info = await self.get_api(api_id)
             dashboard.api_exists = True
