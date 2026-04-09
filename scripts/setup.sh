@@ -196,8 +196,8 @@ VERTEX_AI_ENDPOINT_ID=$VERTEX_ENDPOINT_ID
 VERTEX_AI_REGION=$GCP_REGION
 
 # Vertex AI Model (for Generative AI / Gemini)
-# Examples: gemini-3-flash-preview, gemini-2.5-pro, gemini-3-flash-preview
-VERTEX_AI_MODEL=gemini-3-flash-preview
+# Examples: gemini-2.5-flash, gemini-2.5-pro, gemini-2.5-flash
+VERTEX_AI_MODEL=gemini-2.5-flash
 EOF
     echo "  Written: $ENV_FILE"
 fi

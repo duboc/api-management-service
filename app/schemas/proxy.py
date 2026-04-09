@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class ProxyDeployRequest(BaseModel):
     vertex_ai_endpoint_id: str = ""
-    vertex_ai_model: str = "gemini-3-flash-preview"
+    vertex_ai_model: str = "gemini-2.5-flash"
     vertex_ai_region: str = "us-central1"
     service_name: str = "vertex-ai-proxy"
     service_account_email: str = ""
