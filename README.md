@@ -44,13 +44,13 @@ sequenceDiagram
     participant P as Cloud Run Proxy
     participant V as Vertex AI
 
-    C->>GW: POST /publishers/google/models/<br/>gemini-3.0-flash-preview:generateContent<br/>?key=AIza...
+    C->>GW: POST /publishers/google/models/<br/>gemini-3.0-flash-preview/generateContent<br/>?key=AIza...
 
     Note over GW: Validate API key<br/>Check restrictions
 
     GW->>P: Forward request<br/>(path appended to backend URL)
 
-    Note over P: Get OAuth2 token<br/>from service account
+    Note over P: Get OAuth2 token<br/>Translate /method to :method
 
     P->>V: POST .../publishers/google/models/<br/>gemini-3.0-flash-preview:generateContent<br/>+ Bearer token
 
@@ -61,10 +61,10 @@ sequenceDiagram
 
 ### Key Design Decisions
 
-- **Transparent proxy**: The Cloud Run service forwards any path to
-  `{region}-aiplatform.googleapis.com/v1/projects/{project}/locations/{region}/{path}`.
-  It only adds the OAuth2 bearer token. New Vertex AI methods work automatically
-  without proxy changes.
+- **Path-translating proxy**: The Cloud Run service translates slash-based
+  gateway paths to Vertex AI's colon method syntax (e.g. `/model/generateContent`
+  → `/model:generateContent`) and adds the OAuth2 bearer token. API Gateway
+  doesn't support partial-segment path parameters like `{model}:method`.
 - **API Gateway validates keys**: Uses OpenAPI 2.0 spec with `securityDefinitions`
   for API key auth and `x-google-backend` with `path_translation: APPEND_PATH_TO_ADDRESS`.
 - **Model-agnostic**: The proxy forwards any model path -- Gemini, Imagen, embeddings,
@@ -80,14 +80,16 @@ Derived from the [Vertex AI Discovery Document](https://aiplatform.googleapis.co
 
 | Gateway Path | Vertex AI Method | Auth |
 |---|---|---|
-| `/publishers/google/models/{model}:generateContent` | Generate content (Gemini) | API key |
-| `/publishers/google/models/{model}:streamGenerateContent` | Streaming generation | API key |
-| `/publishers/google/models/{model}:countTokens` | Count tokens | API key |
-| `/publishers/google/models/{model}:embedContent` | Generate embeddings | API key |
-| `/endpoints/{endpoint}:predict` | Online prediction (custom model) | API key |
-| `/endpoints/{endpoint}:generateContent` | Generate content (tuned endpoint) | API key |
-| `/endpoints/{endpoint}:rawPredict` | Raw prediction | API key |
-| `/health` | Proxy health check | None |
+| `/publishers/google/models/{model}/generateContent` | Generate content (Gemini) | API key |
+| `/publishers/google/models/{model}/streamGenerateContent` | Streaming generation | API key |
+| `/publishers/google/models/{model}/countTokens` | Count tokens | API key |
+| `/publishers/google/models/{model}/embedContent` | Generate embeddings | API key |
+| `/endpoints/{endpoint}/predict` | Online prediction (custom model) | API key |
+| `/endpoints/{endpoint}/generateContent` | Generate content (tuned endpoint) | API key |
+| `/endpoints/{endpoint}/rawPredict` | Raw prediction | API key |
+| `/health` | Proxy health check | API key |
+
+> **Note:** Gateway paths use slashes (`/generateContent`) instead of Vertex AI's colon syntax (`:generateContent`). The Cloud Run proxy translates them automatically.
 
 ## Prerequisites
 
@@ -247,7 +249,7 @@ After deploying the gateway and creating an API key:
 
 ```bash
 # Generate content with Gemini
-curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemini-3.0-flash-preview:generateContent?key=YOUR_API_KEY" \
+curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemini-3.0-flash-preview/generateContent?key=YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "contents": [{
@@ -257,7 +259,7 @@ curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemin
   }'
 
 # Count tokens
-curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemini-3.0-flash-preview:countTokens?key=YOUR_API_KEY" \
+curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemini-3.0-flash-preview/countTokens?key=YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "contents": [{
@@ -267,7 +269,7 @@ curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemin
   }'
 
 # Custom endpoint prediction
-curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/endpoints/1234567890:predict?key=YOUR_API_KEY" \
+curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/endpoints/1234567890/predict?key=YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "instances": [{"input": "data"}]

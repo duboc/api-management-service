@@ -88,22 +88,23 @@ class TestGenerateOpenapiSpec:
         spec_yaml = gateway_service._generate_openapi_spec("https://proxy.run.app")
         spec = yaml.safe_load(spec_yaml)
 
-        assert "/publishers/google/models/{model}:generateContent" in spec["paths"]
-        assert "/publishers/google/models/{model}:streamGenerateContent" in spec["paths"]
-        assert "/publishers/google/models/{model}:countTokens" in spec["paths"]
+        # Slash-based paths (API Gateway doesn't support partial-segment params)
+        assert "/publishers/google/models/{model}/generateContent" in spec["paths"]
+        assert "/publishers/google/models/{model}/streamGenerateContent" in spec["paths"]
+        assert "/publishers/google/models/{model}/countTokens" in spec["paths"]
 
     def test_has_custom_endpoint_paths(self, gateway_service):
         spec_yaml = gateway_service._generate_openapi_spec("https://proxy.run.app")
         spec = yaml.safe_load(spec_yaml)
 
-        assert "/endpoints/{endpoint}:predict" in spec["paths"]
-        assert "/endpoints/{endpoint}:generateContent" in spec["paths"]
+        assert "/endpoints/{endpoint}/predict" in spec["paths"]
+        assert "/endpoints/{endpoint}/generateContent" in spec["paths"]
 
-    def test_uses_append_path_translation(self, gateway_service):
+    def test_uses_top_level_backend(self, gateway_service):
         spec_yaml = gateway_service._generate_openapi_spec("https://proxy.run.app")
         spec = yaml.safe_load(spec_yaml)
 
-        backend = spec["paths"]["/publishers/google/models/{model}:generateContent"]["post"]["x-google-backend"]
+        backend = spec["x-google-backend"]
         assert backend["address"] == "https://proxy.run.app"
         assert backend["path_translation"] == "APPEND_PATH_TO_ADDRESS"
 

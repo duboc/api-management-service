@@ -90,27 +90,20 @@ class GatewayService:
     def _generate_openapi_spec(self, backend_url: str) -> str:
         """Generate OpenAPI 2.0 spec for API Gateway.
 
-        The Cloud Run proxy is transparent -- it forwards any path to
-        Vertex AI and only adds the OAuth2 bearer token.  The gateway
-        validates the API key and routes to the proxy.
+        The Cloud Run proxy forwards requests to Vertex AI and adds
+        the OAuth2 bearer token.  The gateway validates the API key
+        and routes to the proxy.
 
-        Uses path_translation: APPEND_PATH_TO_ADDRESS so the gateway
-        appends the matched path to the backend URL automatically.
+        API Gateway does not support partial-segment path parameters
+        (e.g. {model}:generateContent), so we use slashes instead of
+        colons.  The proxy translates /method back to :method before
+        forwarding to Vertex AI.
 
-        Paths defined here are the routes exposed through the gateway.
-        Vertex AI Discovery Document methods supported:
-          - publishers/google/models/{model}:generateContent
-          - publishers/google/models/{model}:streamGenerateContent
-          - publishers/google/models/{model}:countTokens
-          - endpoints/{endpoint}:predict
-          - endpoints/{endpoint}:generateContent
+        Gateway paths use slashes:
+          /publishers/google/models/{model}/generateContent
+        Proxy translates to Vertex AI colon format:
+          /publishers/google/models/{model}:generateContent
         """
-        backend = {
-            "address": backend_url,
-            "jwt_audience": backend_url,
-            "path_translation": "APPEND_PATH_TO_ADDRESS",
-        }
-
         model_param = {
             "name": "model",
             "in": "path",
@@ -134,13 +127,12 @@ class GatewayService:
             "schema": {"type": "object"},
         }
 
-        def _post_op(op_id, summary, path_params=None):
-            params = list(path_params or [])
+        def _post_op(op_id, summary, path_params):
+            params = list(path_params)
             params.append(body_param)
             return {
                 "summary": summary,
                 "operationId": op_id,
-                "x-google-backend": backend,
                 "parameters": params,
                 "responses": {"200": {"description": "OK"}},
             }
@@ -157,6 +149,11 @@ class GatewayService:
             },
             "schemes": ["https"],
             "produces": ["application/json"],
+            "x-google-backend": {
+                "address": backend_url,
+                "jwt_audience": backend_url,
+                "path_translation": "APPEND_PATH_TO_ADDRESS",
+            },
             "securityDefinitions": {
                 "api_key": {
                     "type": "apiKey",
@@ -167,28 +164,29 @@ class GatewayService:
             "security": [{"api_key": []}],
             "paths": {
                 # --- Generative AI (publisher models) ---
-                "/publishers/google/models/{model}:generateContent": {
+                # Use slashes instead of colons (API Gateway limitation)
+                "/publishers/google/models/{model}/generateContent": {
                     "post": _post_op(
                         "generateContent",
                         "Generate content with a Gemini model",
                         [model_param],
                     ),
                 },
-                "/publishers/google/models/{model}:streamGenerateContent": {
+                "/publishers/google/models/{model}/streamGenerateContent": {
                     "post": _post_op(
                         "streamGenerateContent",
                         "Stream generated content from a Gemini model",
                         [model_param],
                     ),
                 },
-                "/publishers/google/models/{model}:countTokens": {
+                "/publishers/google/models/{model}/countTokens": {
                     "post": _post_op(
                         "countTokens",
                         "Count tokens for input content",
                         [model_param],
                     ),
                 },
-                "/publishers/google/models/{model}:embedContent": {
+                "/publishers/google/models/{model}/embedContent": {
                     "post": _post_op(
                         "embedContent",
                         "Generate embeddings for input content",
@@ -196,33 +194,32 @@ class GatewayService:
                     ),
                 },
                 # --- Custom endpoints ---
-                "/endpoints/{endpoint}:predict": {
+                "/endpoints/{endpoint}/predict": {
                     "post": _post_op(
                         "predict",
                         "Online prediction on a deployed model",
                         [endpoint_param],
                     ),
                 },
-                "/endpoints/{endpoint}:generateContent": {
+                "/endpoints/{endpoint}/generateContent": {
                     "post": _post_op(
                         "endpointGenerateContent",
                         "Generate content on a tuned endpoint",
                         [endpoint_param],
                     ),
                 },
-                "/endpoints/{endpoint}:rawPredict": {
+                "/endpoints/{endpoint}/rawPredict": {
                     "post": _post_op(
                         "rawPredict",
                         "Raw prediction with arbitrary payload",
                         [endpoint_param],
                     ),
                 },
-                # --- Health (requires API key like all other endpoints) ---
+                # --- Health ---
                 "/health": {
                     "get": {
                         "summary": "Health check",
                         "operationId": "healthCheck",
-                        "x-google-backend": backend,
                         "responses": {"200": {"description": "OK"}},
                     }
                 },

@@ -8,20 +8,21 @@ from app.services.gcloud_runner import GcloudError, run_gcloud
 
 logger = logging.getLogger(__name__)
 
-PROXY_MAIN_PY = '''"""Transparent Vertex AI proxy for Cloud Run.
+PROXY_MAIN_PY = '''"""Vertex AI proxy for Cloud Run.
 
-This proxy only manages authentication. It forwards every request
-to the Vertex AI REST API as-is, adding the OAuth2 bearer token
-from the attached service account. The API Gateway in front handles
-API key validation.
+This proxy manages authentication and path translation.  It adds
+the OAuth2 bearer token from the attached service account and
+translates slash-based paths from API Gateway to Vertex AI's colon
+method syntax.
 
-Supported Vertex AI patterns (all transparently proxied):
+API Gateway does not support partial-segment path parameters
+(e.g. {model}:generateContent), so the gateway uses slashes:
+  /publishers/google/models/{model}/generateContent
+
+This proxy translates them to Vertex AI's colon format:
   /publishers/google/models/{model}:generateContent
-  /publishers/google/models/{model}:streamGenerateContent
-  /publishers/google/models/{model}:countTokens
-  /endpoints/{id}:predict
-  /endpoints/{id}:generateContent
-  ... any other aiplatform.googleapis.com/v1 path
+
+The API Gateway in front handles API key validation.
 """
 import logging
 import os
@@ -44,6 +45,12 @@ VERTEX_BASE = (
     f"projects/{PROJECT_ID}/locations/{REGION}"
 )
 
+# Vertex AI methods that use colon syntax (:method)
+VERTEX_METHODS = {
+    "generateContent", "streamGenerateContent", "countTokens",
+    "embedContent", "predict", "rawPredict",
+}
+
 _credentials = None
 
 
@@ -58,6 +65,18 @@ def _get_access_token():
     return _credentials.token
 
 
+def _translate_path(path):
+    """Translate slash-based gateway path to Vertex AI colon format.
+
+    /publishers/google/models/gemini-3.0-flash-preview/generateContent
+    -> /publishers/google/models/gemini-3.0-flash-preview:generateContent
+    """
+    parts = path.rsplit("/", 1)
+    if len(parts) == 2 and parts[1] in VERTEX_METHODS:
+        return f"{parts[0]}:{parts[1]}"
+    return path
+
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "healthy", "project": PROJECT_ID, "region": REGION}), 200
@@ -65,8 +84,9 @@ def health():
 
 @app.route("/<path:path>", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 def proxy(path):
-    """Transparently forward any request to Vertex AI, adding auth."""
-    vertex_url = f"{VERTEX_BASE}/{path}"
+    """Forward request to Vertex AI with auth and path translation."""
+    translated = _translate_path(path)
+    vertex_url = f"{VERTEX_BASE}/{translated}"
     logger.info("%s %s -> %s", request.method, request.path, vertex_url)
 
     token = _get_access_token()

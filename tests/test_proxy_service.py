@@ -39,14 +39,20 @@ class TestGenerateProxyFiles:
         assert "flask" in files.requirements_txt
         assert "python" in files.dockerfile
 
-    def test_proxy_is_transparent(self, proxy_service, deploy_request):
+    def test_proxy_has_catch_all_route(self, proxy_service, deploy_request):
         files = proxy_service.generate_proxy_files(deploy_request)
 
-        # The proxy should have a catch-all route, not endpoint-specific routes
         assert "/<path:path>" in files.main_py
         assert "/health" in files.main_py
-        # Should NOT have hardcoded /predict route
         assert '@app.route("/predict"' not in files.main_py
+
+    def test_proxy_translates_paths(self, proxy_service, deploy_request):
+        files = proxy_service.generate_proxy_files(deploy_request)
+
+        # Proxy translates slash-based gateway paths to Vertex AI colon format
+        assert "_translate_path" in files.main_py
+        assert "VERTEX_METHODS" in files.main_py
+        assert "generateContent" in files.main_py
 
     def test_proxy_adds_auth(self, proxy_service, deploy_request):
         files = proxy_service.generate_proxy_files(deploy_request)
