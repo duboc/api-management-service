@@ -157,6 +157,6 @@ async def get_gateway_dashboard(
 ) -> GatewayDashboardResponse:
     return await service.get_dashboard(
         api_id=settings.gateway_api_id,
-        gateway_id=settings.gateway_api_id,
+        gateway_id=f"{settings.gateway_api_id}-gw",
         location=settings.gateway_region,
     )

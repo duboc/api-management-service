@@ -55,7 +55,7 @@ async def get_overall_dashboard(
         try:
             gw_dashboard = await gw_service.get_dashboard(
                 api_id=settings.gateway_api_id,
-                gateway_id=settings.gateway_api_id,
+                gateway_id=f"{settings.gateway_api_id}-gw",
                 location=region,
             )
             dashboard.api_gateway_deployed = gw_dashboard.gateway_exists

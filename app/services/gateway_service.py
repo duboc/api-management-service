@@ -434,7 +434,7 @@ class GatewayService:
                 apis = await self.list_apis()
                 if apis:
                     api_id = apis[0].name.split("/")[-1]
-                    gateway_id = api_id
+                    gateway_id = f"{api_id}-gw"
                 else:
                     return dashboard
             except Exception:
