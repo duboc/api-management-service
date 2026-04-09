@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # Vertex AI
     vertex_ai_endpoint_id: str = ""
     vertex_ai_region: str = "us-central1"
-    vertex_ai_model: str = "gemini-2.0-flash"
+    vertex_ai_model: str = "gemini-3.0-flash-preview"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

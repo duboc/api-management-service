@@ -45,7 +45,7 @@ that secures access to Vertex AI services through API key validation.
 ```
 Client                API Gateway          Cloud Run Proxy         Vertex AI
   |                       |                      |                     |
-  |  POST /publishers/google/models/gemini-2.0-flash:generateContent  |
+  |  POST /publishers/google/models/gemini-3.0-flash-preview:generateContent  |
   |  + ?key=AIza...       |                      |                     |
   |---------------------->|                      |                     |
   |                       |                      |                     |
@@ -151,7 +151,7 @@ GATEWAY_API_ID=                     # Set after creating API via UI
 PROXY_SERVICE_NAME=vertex-ai-proxy  # Cloud Run service name
 PROXY_SERVICE_ACCOUNT=              # SA with roles/aiplatform.user
 VERTEX_AI_REGION=us-central1        # Vertex AI region
-VERTEX_AI_MODEL=gemini-2.0-flash    # Default Gemini model
+VERTEX_AI_MODEL=gemini-3.0-flash-preview    # Default Gemini model
 ```
 
 ## Project Structure
@@ -246,7 +246,7 @@ After deploying the gateway and creating an API key:
 
 ```bash
 # Generate content with Gemini
-curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemini-2.0-flash:generateContent?key=YOUR_API_KEY" \
+curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemini-3.0-flash-preview:generateContent?key=YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "contents": [{
@@ -256,7 +256,7 @@ curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemin
   }'
 
 # Count tokens
-curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemini-2.0-flash:countTokens?key=YOUR_API_KEY" \
+curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemini-3.0-flash-preview:countTokens?key=YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "contents": [{
