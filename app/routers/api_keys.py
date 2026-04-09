@@ -2,6 +2,7 @@ import logging
 
 from fastapi import APIRouter, Depends, Request, status
 
+from app.config import settings
 from app.schemas.api_keys import (
     KeyCreateRequest,
     KeyListResponse,
@@ -18,8 +19,17 @@ def get_api_keys_service(request: Request) -> ApiKeysService:
     return request.app.state.api_keys_service
 
 
-def get_managed_service(request: Request) -> str:
-    return getattr(request.app.state, "gateway_managed_service", "")
+async def get_managed_service(request: Request) -> str:
+    ms = getattr(request.app.state, "gateway_managed_service", "")
+    if not ms and settings.gateway_api_id:
+        try:
+            gw_service = request.app.state.gateway_service
+            api_info = await gw_service.get_api(settings.gateway_api_id)
+            ms = api_info.managed_service
+            request.app.state.gateway_managed_service = ms
+        except Exception:
+            pass
+    return ms
 
 
 @router.get("", response_model=KeyListResponse)

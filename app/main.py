@@ -33,6 +33,24 @@ async def lifespan(app: FastAPI):
     )
     app.state.api_keys_service = ApiKeysService(settings.gcp_project_id)
     app.state.gateway_managed_service = ""
+
+    # Try to fetch managed service from existing gateway API
+    if settings.gateway_api_id:
+        try:
+            api_info = await app.state.gateway_service.get_api(
+                settings.gateway_api_id
+            )
+            app.state.gateway_managed_service = api_info.managed_service
+            logger.info(
+                "Gateway managed service: %s",
+                app.state.gateway_managed_service,
+            )
+        except Exception:
+            logger.info(
+                "Could not fetch managed service for %s",
+                settings.gateway_api_id,
+            )
+
     yield
     logger.info("Shutting down API Gateway Manager")
 
