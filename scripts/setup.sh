@@ -97,6 +97,36 @@ else
     echo "  Proxy SA: not found (run scripts/create-service-account.sh)"
 fi
 
+# Detect existing API Gateway APIs
+echo "  Checking API Gateway APIs ..."
+GATEWAY_API_ID=""
+GW_APIS_JSON=$(gcloud api-gateway apis list \
+    --project="$PROJECT_ID" \
+    --format="json(name)" 2>/dev/null || echo "[]")
+GW_API_COUNT=$(echo "$GW_APIS_JSON" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
+
+if [[ "$GW_API_COUNT" -gt 0 ]]; then
+    GATEWAY_API_ID=$(echo "$GW_APIS_JSON" | python3 -c "
+import json, sys
+apis = json.load(sys.stdin)
+if apis:
+    name = apis[0].get('name','')
+    print(name.split('/')[-1] if '/' in name else name)
+" 2>/dev/null || echo "")
+    echo "  Found API Gateway: $GATEWAY_API_ID"
+else
+    echo "  No API Gateway APIs found (create one via the web UI)"
+fi
+
+# Detect existing Cloud Run proxy
+echo "  Checking Cloud Run proxy ..."
+PROXY_SERVICE_NAME="vertex-ai-proxy"
+if gcloud run services describe "$PROXY_SERVICE_NAME" --region="$GCP_REGION" --platform=managed --project="$PROJECT_ID" &>/dev/null 2>&1; then
+    echo "  Proxy service detected: $PROXY_SERVICE_NAME"
+else
+    echo "  Proxy not deployed yet (deploy via the web UI)"
+fi
+
 # Detect existing Vertex AI endpoints
 echo "  Checking Vertex AI endpoints ..."
 VERTEX_ENDPOINT_ID=""
@@ -152,8 +182,7 @@ PORT=8081
 LOG_LEVEL=INFO
 
 # API Gateway
-# Set after creating an API with the web UI or gcloud
-GATEWAY_API_ID=
+GATEWAY_API_ID=$GATEWAY_API_ID
 GATEWAY_REGION=$GCP_REGION
 
 # Cloud Run Proxy
@@ -167,8 +196,8 @@ VERTEX_AI_ENDPOINT_ID=$VERTEX_ENDPOINT_ID
 VERTEX_AI_REGION=$GCP_REGION
 
 # Vertex AI Model (for Generative AI / Gemini)
-# Examples: gemini-2.0-flash, gemini-2.5-pro, gemini-2.5-flash
-VERTEX_AI_MODEL=gemini-2.0-flash
+# Examples: gemini-3.0-flash-preview, gemini-2.5-pro, gemini-2.5-flash
+VERTEX_AI_MODEL=gemini-3.0-flash-preview
 EOF
     echo "  Written: $ENV_FILE"
 fi

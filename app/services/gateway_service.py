@@ -404,8 +404,17 @@ class GatewayService:
     ) -> GatewayDashboardResponse:
         dashboard = GatewayDashboardResponse()
 
+        # Auto-detect API if not configured
         if not api_id:
-            return dashboard
+            try:
+                apis = await self.list_apis()
+                if apis:
+                    api_id = apis[0].name.split("/")[-1]
+                    gateway_id = api_id
+                else:
+                    return dashboard
+            except Exception:
+                return dashboard
 
         try:
             api_info = await self.get_api(api_id)
