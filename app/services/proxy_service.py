@@ -68,8 +68,8 @@ def _get_access_token():
 def _translate_path(path):
     """Translate slash-based gateway path to Vertex AI colon format.
 
-    /publishers/google/models/gemini-3.0-flash-preview/generateContent
-    -> /publishers/google/models/gemini-3.0-flash-preview:generateContent
+    /publishers/google/models/gemini-3-flash-preview/generateContent
+    -> /publishers/google/models/gemini-3-flash-preview:generateContent
     """
     parts = path.rsplit("/", 1)
     if len(parts) == 2 and parts[1] in VERTEX_METHODS:

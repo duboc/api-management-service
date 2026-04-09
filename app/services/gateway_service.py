@@ -109,7 +109,7 @@ class GatewayService:
             "in": "path",
             "required": True,
             "type": "string",
-            "description": "Model ID (e.g. gemini-3.0-flash-preview)",
+            "description": "Model ID (e.g. gemini-3-flash-preview)",
         }
 
         endpoint_param = {

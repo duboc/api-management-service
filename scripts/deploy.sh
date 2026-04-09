@@ -279,7 +279,7 @@ PROXY_SERVICE_ACCOUNT=$PROXY_SA_EMAIL
 # Vertex AI
 VERTEX_AI_ENDPOINT_ID=
 VERTEX_AI_REGION=$REGION
-VERTEX_AI_MODEL=gemini-3.0-flash-preview
+VERTEX_AI_MODEL=gemini-3-flash-preview
 EOF
 
 echo "  .env written"
@@ -301,7 +301,7 @@ echo "    open http://localhost:8081"
 echo ""
 echo "  Test with curl:"
 echo ""
-echo "    curl -X POST \"https://$GATEWAY_URL/publishers/google/models/gemini-3.0-flash-preview/generateContent?key=$KEY_STRING\" \\"
+echo "    curl -X POST \"https://$GATEWAY_URL/publishers/google/models/gemini-3-flash-preview/generateContent?key=$KEY_STRING\" \\"
 echo "      -H \"Content-Type: application/json\" \\"
 echo "      -d '{"
 echo "        \"contents\": [{"

@@ -44,7 +44,7 @@ sequenceDiagram
     participant P as Cloud Run Proxy
     participant V as Vertex AI
 
-    C->>GW: POST /publishers/google/models/<br/>gemini-3.0-flash-preview/generateContent<br/>?key=AIza...
+    C->>GW: POST /publishers/google/models/<br/>gemini-3-flash-preview/generateContent<br/>?key=AIza...
 
     Note over GW: Validate API key<br/>Check restrictions
 
@@ -52,7 +52,7 @@ sequenceDiagram
 
     Note over P: Get OAuth2 token<br/>Translate /method to :method
 
-    P->>V: POST .../publishers/google/models/<br/>gemini-3.0-flash-preview:generateContent<br/>+ Bearer token
+    P->>V: POST .../publishers/google/models/<br/>gemini-3-flash-preview:generateContent<br/>+ Bearer token
 
     V-->>P: JSON response (streamed)
     P-->>GW: Stream response back
@@ -154,7 +154,7 @@ GATEWAY_API_ID=                     # Set after creating API via UI
 PROXY_SERVICE_NAME=vertex-ai-proxy  # Cloud Run service name
 PROXY_SERVICE_ACCOUNT=              # SA with roles/aiplatform.user
 VERTEX_AI_REGION=us-central1        # Vertex AI region
-VERTEX_AI_MODEL=gemini-3.0-flash-preview    # Default Gemini model
+VERTEX_AI_MODEL=gemini-3-flash-preview    # Default Gemini model
 ```
 
 ## Project Structure
@@ -249,7 +249,7 @@ After deploying the gateway and creating an API key:
 
 ```bash
 # Generate content with Gemini
-curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemini-3.0-flash-preview/generateContent?key=YOUR_API_KEY" \
+curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemini-3-flash-preview/generateContent?key=YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "contents": [{
@@ -259,7 +259,7 @@ curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemin
   }'
 
 # Count tokens
-curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemini-3.0-flash-preview/countTokens?key=YOUR_API_KEY" \
+curl -X POST "https://YOUR-GATEWAY.uc.gateway.dev/publishers/google/models/gemini-3-flash-preview/countTokens?key=YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "contents": [{
